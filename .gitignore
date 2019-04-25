@@ -1,0 +1,15 @@
+__pycache__
+.vscode
+.pylintrc
+create_test_data.py
+*.csv
+*.json
+*.feather
+*.db
+NflDataLoader/database/schedule/shelves/2012
+NflDataLoader/database/schedule/shelves/2013
+NflDataLoader/database/schedule/shelves/2014
+NflDataLoader/database/schedule/shelves/2015
+NflDataLoader/database/schedule/shelves/2016
+NflDataLoader/database/schedule/shelves/2017
+NflDataLoader/database/schedule/shelves/2018

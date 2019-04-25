@@ -1,0 +1,15 @@
+##basic requirements
+#
+#pip install -r base_req.txt
+#
+numpy
+scipy
+matplotlib
+ipython
+jupyter
+pandas
+requests
+beautifulsoup4
+tqdm
+numexpr
+bottleneck
