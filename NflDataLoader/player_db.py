@@ -1,9 +1,10 @@
 from datetime import date
 
 import sqlalchemy as db
-from sqlalchemy import Column, Integer, String, Date
+from sqlalchemy import Column, Integer, String, Date, or_
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm.exc import MultipleResultsFound
 
 
 Base = declarative_base()
@@ -22,6 +23,9 @@ class Player(Base):
     exp = Column(Integer)
     college = Column(String)
     team = Column(String)
+
+    def __repr__(self):
+        return f"Player: {self.id}, {self.name}, {self.status}"
 
 
 class Players():
@@ -67,23 +71,44 @@ class Players():
         return new_player
 
 
-    def add_player(self, player):
-        self.session.add(player)
-        self.session.commit()
+    def add_player(self, newplayer):
+        query = self.session.query(Player)\
+            .filter(or_(Player.name == newplayer.name, Player.player_id == newplayer.player_id))
+        try:
+            match = query.one_or_none()
+            if not match:
+                self.session.add(newplayer)
+                self.session.commit()
+            # else update player ?
+        except MultipleResultsFound:
+            print("Multiple players exist in database")
 
 
     def get_first_player(self):
         p = self.session.query(Player).first()
         return p
 
-dbase = Players()
-new = dbase.create_player({'name': "Test Player",
-                           'position': 'WR', 'trikotnumber': 1, 'age': 20,
-                           'birthdate': date.today()})
-dbase.add_player(new)
 
-q = dbase.get_first_player()
-print(q.id, q.name, q.position, q.birthdate)
+    def get_active_players(self):
+        active_players = self.session.query(Player).filter_by(status='ACT')
+        print(active_players.all())
+        return "active"
+
+
+if __name__ == "__main__":    
+    dbase = Players(echo=False)
+    new = dbase.create_player({'name': "Test Player", 'player_id': 1,
+                               'position': 'WR', 'trikotnumber': 1, 'age': 20,
+                               'birthdate': date.today(), 'status':'ACT'})
+    dbase.add_player(new)
+    new2 = dbase.create_player({'name': "Inactive", "status":'', 'player_id': 2})
+    dbase.add_player(new2)
+    new3 = dbase.create_player({'name': "Active Player", "player_id": 3, "status": 'ACT'})
+    dbase.add_player(new3)
+
+    q = dbase.get_first_player()
+    print(q)
+    active = dbase.get_active_players()
 
 
 '''
