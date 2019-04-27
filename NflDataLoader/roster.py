@@ -1,15 +1,21 @@
+# roster.py
 import re
 from datetime import date
+from typing import Tuple, List
 
 import requests
 from bs4 import BeautifulSoup as BS
 from tqdm import tqdm
 
-from playerinfo import pounds_to_kg, inch_to_cm
-import dbase
+from player_db import Players
+from playerdataloader import convert_inch_to_cm, convert_pounds_to_kg
+
 
 # profile_url = 'http://www.nfl.com/players/profile'
 # profile_load = {'id': '00-0028735'}
+
+Player_IDs = Tuple[str]
+Roster = List[dict]
 
 TEAMS = [
     'ARI',
@@ -47,16 +53,12 @@ TEAMS = [
 ]
 
 
-def download_roster(team):
+def download_roster(team: str) -> Roster:
     roster_url = 'http://www.nfl.com/teams/roster'
     roster_load = {'team': team}
-
-    response = requests.get(roster_url, roster_load)
-
+    response = requests.get(roster_url, roster_load, timeout=2)
     soup = BS(response.text, 'html.parser')
-
     tbodys = soup.find(id='result').find_all('tbody')
-
     roster = []
     for row in tbodys[len(tbodys) - 1].find_all('tr'):
         try:
@@ -65,7 +67,10 @@ def download_roster(team):
                 tds.append(td)
                 data.append(td.get_text().strip())
             name = tds[1].a.get_text().strip()
+            player_url = "http://www.nfl.com" + tds[1].a.get('href')
+            gsis_id, esb_id = get_player_ids(player_url)
             d = {
+                'player_id': gsis_id,
                 'number': data[0],
                 'name': name,
                 'position': data[2],
@@ -75,7 +80,8 @@ def download_roster(team):
                 'birthdate': data[6],
                 'experience': data[7],
                 'college': data[8],
-                'team': team
+                'team': team,
+                'esb_id': esb_id
             }
             roster.append(d)
         except Exception:
@@ -83,23 +89,39 @@ def download_roster(team):
     return roster
 
 
-def convert_roster(roster):
+def get_player_ids(url: str) -> Player_IDs:
+    response = requests.get(url, timeout=2)
+    if response.status_code == 200:
+        text = response.text
+        index = text.find('GSIS')
+        gsis_id = text[index+9:index+19]
+        if not gsis_id[-4:].isdigit():
+            gsis_id = None
+        index = text.find('ESB ID')
+        esb_id = text[index+8:index+17]
+        return (gsis_id, esb_id)
+    return None
+
+
+def convert_roster(roster: Roster):
     today = date.today()
     for player in roster:
-        player['height'] = inch_to_cm(player['height'])
-        player['weight'] = pounds_to_kg(int(player['weight']))
+        player['height'] = convert_inch_to_cm(player['height'])
+        player['weight'] = convert_pounds_to_kg(int(player['weight']))
         name = player['name']
-        m = re.match(r"(?P<lastname>[\S\s]+), (?P<firstname>\S+)", name)
-        player['name'] = m.group('firstname') + " " + m.group('lastname')
-        split = re.split(r'/', player['birthdate'])
-        month, day, year = int(split[0]), int(split[1]), int(split[2])
-        bday = date(year, month, day)
-        player['birthdate'] = bday.isoformat()
+        match = re.match(r"(?P<lastname>[\S\s]+), (?P<firstname>\S+)", name)
+        player['name'] = match.group('firstname') + " " + match.group('lastname')
+        try:
+            split = re.split(r'/', player['birthdate'])
+            month, day, year = int(split[0]), int(split[1]), int(split[2])
+            bday = date(year, month, day)
+        except ValueError:
+            bday = today
+        player['birthdate'] = bday
         age = today - bday
         age = age.days
         age = int(age / 365)
         player['age'] = age
-        player['playerID'] = str(1)
         player['experience'] = int(player['experience'])
         try:
             player['number'] = int(player['number'])
@@ -108,38 +130,25 @@ def convert_roster(roster):
     return roster
 
 
-def prepare_db_entry(playerdict):
-    dic = playerdict
-    player = []
-    player.append(dic['playerID'])
-    player.append(dic['number'])
-    player.append(dic['name'])
-    player.append(dic['position'])
-    player.append(dic['status'])
-    player.append(dic['height'])
-    player.append(dic['weight'])
-    player.append(dic['birthdate'])
-    player.append(dic['age'])
-    player.append(dic['experience'])
-    player.append(dic['college'])
-    player.append(dic['team'])
-    return player
-
-
-def add_team_to_database(roster):
+def create_db_entries(db: Players, roster: Roster) -> list:
     roster = convert_roster(roster)
+    players = list()
     for player in roster:
-        entry = prepare_db_entry(player)
-        dbase.add_player_to_db(entry)
+        players.append(db.create_player(player))
+    return players
 
 
 def create_new_database():
-    dbase.create_database("nfl", "Players")
+    db = Players()
+    db.create_playerdb()
     for team in tqdm(TEAMS, desc="Teams"):
         team_roster = download_roster(team)
-        add_team_to_database(team_roster)
-
+        roster = create_db_entries(db, team_roster)
+        for player in roster:
+            db.add_player(player)
+    return db
 
 
 if __name__ == '__main__':
-    create_new_database()
+    dbase = create_new_database()
+    dbase.get_active_players()

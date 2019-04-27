@@ -11,7 +11,7 @@ Base = declarative_base()
 class Player(Base):
     __tablename__ = 'players'
     id = Column(Integer, primary_key=True)
-    player_id = Column(Integer)
+    player_id = Column(String) # gsis id
     trikotnumber = Column(Integer)
     name = Column(String)
     position = Column(String)
@@ -23,6 +23,7 @@ class Player(Base):
     exp = Column(Integer)
     college = Column(String)
     team = Column(String)
+    esb_id = Column(String)
 
     def __repr__(self):
         return f"Player: {self.id}, {self.name}, {self.status}"
@@ -52,7 +53,7 @@ class Players():
         expects dict with subset of these keys:
         player_id, trikotnumber, name, position,
         status, height, weight, birthdate, age,
-        exp, college, team
+        exp, college, team, esb_id
         """
         new_player = Player(
             player_id=infos.get('player_id'),
@@ -67,6 +68,7 @@ class Players():
             exp=infos.get('exp'),
             college=infos.get('college'),
             team=infos.get('team'),
+            esb_id=infos.get('esb_id')
         )
         return new_player
 
