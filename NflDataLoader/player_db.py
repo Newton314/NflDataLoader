@@ -54,14 +54,14 @@ class Players():
     def __init__(self, path='NflDataLoader/database/nflplayers.db', echo=True):
         db_path = "sqlite:///" + path
         self.engine = db.create_engine(db_path, echo=echo)
-        self.create_playerdb()
+        self._create_playerdb()
         # create a sessionmaker and connect the Engine object to it
         self.SessionMaker = sessionmaker(bind=self.engine)
         # create the session, which is the handler to the database
         self.session = self.SessionMaker()
 
 
-    def create_playerdb(self):
+    def _create_playerdb(self):
         Base.metadata.create_all(self.engine)
 
 
@@ -108,20 +108,65 @@ class Players():
 
 
     def get_first_player(self):
-        first = self.session.query(Player).first()
-        return first.asdict()
+        return self.session.query(Player).first()
+
+
+    def get_player(self, player_id):
+        """returns the player with the given player_id"""
+        return self.session.query(Player).filter_by(player_id=player_id).one_or_none()
 
 
     def get_active_players(self):
+        """ returns a list of playerdictionaries from players whose status == 'ACT'"""
         return [player.asdict() for player in self.session.query(Player).filter_by(status='ACT')]
-        
+
+
+    def update_player(self, player_id: str, updated_player: Player):
+        """updates name, trikotnumber, status, height, weight, team,
+        college, birthdate, age, exp of the player with the given player_id
+        if there is no player with the given player_id adds it to the database
+        """
+        player = self.session.query(Player).filter_by(player_id=player_id).one_or_none()
+        if player is None:
+            self.add_player(updated_player)
+        else:
+            player.name = updated_player.name
+            player.trikotnumber = updated_player.trikotnumber
+            player.status = updated_player.status
+            player.height = updated_player.height
+            player.weight = updated_player.weight
+            player.team = updated_player.team
+            player.college = updated_player.college
+            player.birthdate = updated_player.birthdate
+            player.age = updated_player.age
+            player.exp = updated_player.exp
+            self.session.commit()
+
+
+    def update_player_status(self, player_id: str, status: str):
+        """updates the status of the player with the given player_id"""
+        player = self.session.query(Player).filter_by(player_id=player_id).one_or_none()
+        if player is not None:
+            player.status = status
 
 
 if __name__ == "__main__":
-    dbase = Players(echo=False)
-    q = dbase.get_active_players()
-    df = pd.DataFrame(q)
-    print(df.head())
+    dbase = Players(echo=False, path='test.db')
+    p = dbase.create_player({
+        'player_id': '00-01',
+        'name': 'Test Player',
+        'status': 'INJ'
+    })
+    up = dbase.create_player({
+        'player_id': '00-01',
+        'name': 'Test Player',
+        'status': 'ACT'
+    })
+    dbase.add_player(p)
+    print(dbase.get_first_player().asdict())
+    dbase.update_player(up.player_id, up)
+    print(dbase.get_first_player().asdict())
+    f = dbase.get_first_player()
     # active = dbase.get_active_players()
 # add multiple objects to the database
 # session.add_all([
