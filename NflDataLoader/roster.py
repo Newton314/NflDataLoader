@@ -2,6 +2,7 @@
 import re
 from datetime import date
 from typing import Tuple, List
+from pathlib import Path
 
 import requests
 from bs4 import BeautifulSoup as BS
@@ -138,9 +139,8 @@ def create_db_entries(db: Players, roster: Roster) -> list:
     return players
 
 
-def create_new_database():
-    db = Players()
-    db.create_playerdb()
+def create_new_database(PATH: Path = Path('NflDataLoader/database/nflplayers.db')):
+    db = Players(path=str(PATH))
     for team in tqdm(TEAMS, desc="Teams"):
         team_roster = download_roster(team)
         roster = create_db_entries(db, team_roster)
@@ -149,6 +149,18 @@ def create_new_database():
     return db
 
 
+def update_database(PATH: Path = Path('NflDataLoader/database/nflplayers.db')):
+    if PATH.exists():
+        db = Players(path=str(PATH))
+        for team in tqdm(TEAMS, desc="Updating Database..."):
+            team_roster = download_roster(team)
+            team_roster = create_db_entries(db, team_roster)
+            for player in team_roster:
+                db.update_player(player.player_id, player)
+    else:
+        db = create_new_database(PATH=PATH)
+
+
 if __name__ == '__main__':
-    dbase = create_new_database()
+    update_database()
     dbase.get_active_players()

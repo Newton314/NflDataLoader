@@ -51,7 +51,7 @@ class Player(Base):
 
 
 class Players():
-    def __init__(self, path='NflDataLoader/database/nflplayers.db', echo=True):
+    def __init__(self, path: str = 'NflDataLoader/database/nflplayers.db', echo: bool = True):
         db_path = "sqlite:///" + path
         self.engine = db.create_engine(db_path, echo=echo)
         self._create_playerdb()
