@@ -27,7 +27,8 @@ class NflLoader():
         self.schedule_loader = None
         self.tables = []
         self.weektables = {}
-        self.datapath = Path(".") / 'database'
+        self.datapath = Path("NflDataLoader/database")
+        self.datapath.mkdir(exist_ok=True)
         self.schedule = None
 
 

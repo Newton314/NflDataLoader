@@ -33,10 +33,14 @@ def download_playerdata(playerid):
 
 def get_meta_data(playerinfo):
     full_name = playerinfo.find(class_='player-name').get_text().strip()
-    number = playerinfo.find(class_='player-number').get_text()
-    match = re.search(r'#(?P<number>\d+)\s(?P<position>[A-Z]+)', number)
-    number = match.group('number')
-    position = match.group('position')
+    try:
+        number = playerinfo.find(class_='player-number').get_text()
+        match = re.search(r'#(?P<number>\d+)\s(?P<position>[A-Z]+)', number)
+        number = match.group('number')
+        position = match.group('position')
+    except AttributeError:
+        number = 0
+        position = None
     p = playerinfo.find_all('p')
     info1 = list(p[2].stripped_strings)
     college = list(p[4].stripped_strings)

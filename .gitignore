@@ -1,6 +1,5 @@
 __pycache__
 .vscode
-.pylintrc
 create_test_data.py
 *.csv
 *.json
