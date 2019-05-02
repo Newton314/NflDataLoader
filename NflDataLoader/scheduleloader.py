@@ -4,12 +4,16 @@ import json
 from xml.sax import make_parser
 from datetime import date
 from pathlib import Path
+from typing import NewType
 
 import requests
 from requests.exceptions import Timeout
+import pandas as pd
 
 from .NFLHandler import NflHandler
 
+
+EID = NewType('EID', str)
 
 class ScheduleLoader():
     def __init__(self, season, week=None, seasontype='REG', update=True):
@@ -47,9 +51,8 @@ class ScheduleLoader():
             parser.setContentHandler(content_handler)
             parser.parse(schedule_file)
             return content_handler.get_games()
-        else:
-            print("Couldn't load schedule")
-            return None
+        print("Couldn't load schedule")
+        return None
 
 
     def update_schedule(self):
@@ -122,6 +125,21 @@ def load_json(filepath):
         obj = json.load(jfile)
     return obj
 
+
+def create_date_from_eid(eid: EID) -> date:
+    year = int(eid[:4])
+    month = int(eid[4:6])
+    day = int(eid[6:8])
+    return date(year, month, day)
+
+
+def add_dateinfo(dframe: pd.DataFrame, dte: date) -> pd.DataFrame:
+    dframe['date'] = dte
+    dframe['year'] = dte.year
+    dframe['month'] = dte.month
+    dframe['day'] = dte.day
+    dframe['weekday'] = dte.weekday()
+    return dframe
 
 TEAMS = [
     ['ARI', 'Arizona', 'Cardinals', 'Arizona Cardinals'],

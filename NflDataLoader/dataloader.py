@@ -1,5 +1,4 @@
 import threading
-from datetime import date
 from pathlib import Path
 from typing import NewType
 
@@ -8,28 +7,27 @@ import pandas as pd
 import numpy as np
 from tqdm import tqdm
 
-from .scheduleloader import ScheduleLoader, load_json, save_obj_to_json
+from .scheduleloader import (
+    ScheduleLoader, load_json, save_obj_to_json, create_date_from_eid, add_dateinfo)
 from .playerinfo import get_playerdata
 
 EID = NewType('EID', str)
 
 class NflLoader():
-    '''
-    Contains methods to download nfl game data.
-    '''
-
+    """Contains methods to download nfl game data.
+    """
     def __init__(self, **kwargs):
         """
         optional arguments:
-        bool new: if True creates new tables from scratch, ignoring old ones (default False)
-        bool save: if True saves intermediate tables (default True)
+        new bool: if True creates new tables from scratch, ignoring old ones (default False)
+        save bool: if True saves intermediate tables (default True)
         """
         self.new = kwargs.get('new', False)
         self.save = kwargs.get('save', True)
         self.schedule_loader = None
         self.tables = []
         self.weektables = {}
-        self.datapath = Path("NflDataLoader/database")
+        self.datapath = Path(".") / 'database'
         self.schedule = None
 
 
@@ -64,22 +62,6 @@ class NflLoader():
                 return resp.json()
             else:
                 print("No Connection to game center")
-
-
-    def create_date_from_eid(self, eid: EID) -> date:
-        year = int(eid[:4])
-        month = int(eid[4:6])
-        day = int(eid[6:8])
-        return date(year, month, day)
-
-
-    def __add_date_info(self, dframe: pd.DataFrame, dte: date) -> pd.DataFrame:
-        dframe['date'] = dte
-        dframe['year'] = dte.year
-        dframe['month'] = dte.month
-        dframe['day'] = dte.day
-        dframe['weekday'] = dte.weekday()
-        return dframe
 
 
     def __det_places(self, eid: EID, gamestats: dict, team: str) -> tuple:
@@ -209,7 +191,7 @@ class NflLoader():
             table['home'] = 0
             table['away'] = 1
         table['seasonweek'] = week
-        table = self.__add_date_info(table, self.create_date_from_eid(game_eid))
+        table = add_dateinfo(table, create_date_from_eid(game_eid))
         table['tot_score'] = gamestats[game_eid][place]['score']['T']
         table['pts_allwd'] = gamestats[game_eid][opp_place]['score']['T']
         table = table.sort_values(by='playerID')

@@ -30,7 +30,7 @@ class TestPlayerLoader(unittest.TestCase):
 class TestPlayerDB(unittest.TestCase):
     def setUp(self):
         today = date.today()
-        self.players = Players(path='tests/fixtures/test.db')
+        self.players = Players(path='tests/fixtures/test.db', echo=False)
         self.test_player = {'name': 'Test Player', 'position': 'test_position',
                             'trikotnumber': 3, 'birthdate': today,
                             'player_id': "00-01", 'status': 'ACT'}

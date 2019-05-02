@@ -2,7 +2,7 @@ import unittest
 
 from datetime import date
 
-from NflDataLoader.scheduleloader import ScheduleLoader
+from NflDataLoader.scheduleloader import ScheduleLoader, create_date_from_eid
 
 
 class TestScheduleLoader(unittest.TestCase):
@@ -31,6 +31,15 @@ class TestScheduleLoader(unittest.TestCase):
         d = date(2019, 3, 1)
         season = loader.get_season(dte=d)
         self.assertEqual(season, 2019)
+
+
+    def test_create_date_from_eid(self):
+        year = 1992
+        month = 8
+        day = 15
+        d = date(year, month, day)
+        eid = f"{year}0{month}{day}"
+        self.assertEqual(create_date_from_eid(eid), d)
 
 
 if __name__ == "__main__":

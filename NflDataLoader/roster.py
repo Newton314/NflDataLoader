@@ -159,8 +159,9 @@ def update_database(PATH: Path = Path('NflDataLoader/database/nflplayers.db')):
                 db.update_player(player.player_id, player)
     else:
         db = create_new_database(PATH=PATH)
+    return db
 
 
 if __name__ == '__main__':
-    update_database()
+    dbase = update_database()
     dbase.get_active_players()
