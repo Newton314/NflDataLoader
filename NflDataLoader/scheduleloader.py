@@ -16,11 +16,16 @@ from .NFLHandler import NflHandler
 EID = NewType('EID', str)
 
 class ScheduleLoader():
-    def __init__(self, season, week=None, seasontype='REG', update=True):
+    def __init__(self, season, week=None, seasontype='REG', update=True, **kwargs):
+        """
+        opt argument:
+        path: str = location for the schedule data
+        """
         self.season = season
         self.seasontype = seasontype
-        self.base_path = Path("NflDataLoader/database/schedule")
+        self.base_path = Path(kwargs.get('path', 'NflDataLoader/database/schedule'))
         self.directory_path = self.base_path / str(season)
+        self.directory_path.mkdir(parents=True, exist_ok=True)
         if update:
             self.update_schedule()
         if week:

@@ -7,7 +7,8 @@ from NflDataLoader.scheduleloader import ScheduleLoader, create_date_from_eid
 
 class TestScheduleLoader(unittest.TestCase):
     def test_basic_schedule(self):
-        s = ScheduleLoader("test", "test_sched", update=False)
+        self.path = 'tests/fixtures/schedule'
+        s = ScheduleLoader("test", "test_sched", update=False, path=self.path)
         test_schedule = s.schedule
         test_game = test_schedule[0]
         self.assertEqual(test_game['entry1'], 1)
@@ -17,7 +18,7 @@ class TestScheduleLoader(unittest.TestCase):
         '''
         tests for the correct previous season (< march).
         '''
-        loader = ScheduleLoader("test", "test_sched", update=False)
+        loader = ScheduleLoader("test", "test_sched", update=False, path=self.path)
         d = date(2019, 2, 28)
         season = loader.get_season(dte=d)
         self.assertEqual(season, 2018)
@@ -27,7 +28,7 @@ class TestScheduleLoader(unittest.TestCase):
         '''
         tests for the correct current season (>= march).
         '''
-        loader = ScheduleLoader("test", "test_sched", update=False)
+        loader = ScheduleLoader("test", "test_sched", update=False, path=self.path)
         d = date(2019, 3, 1)
         season = loader.get_season(dte=d)
         self.assertEqual(season, 2019)
