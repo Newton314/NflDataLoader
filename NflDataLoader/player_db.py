@@ -95,14 +95,18 @@ class Players():
 
 
     def add_player(self, newplayer):
+        """
+        sollte in Zukunft auch esb-id unterstützen
+        """
         query = self.session.query(Player)\
             .filter(or_(Player.name == newplayer.name, Player.player_id == newplayer.player_id))
         try:
             match = query.one_or_none()
-            if not match:
+            if match is None:
                 self.session.add(newplayer)
                 self.session.commit()
-            # else update player ?
+            else:
+                print(f"Player {newplayer.name} is already in the database.")
         except MultipleResultsFound:
             print("Multiple players exist in database")
 
@@ -111,9 +115,15 @@ class Players():
         return self.session.query(Player).first()
 
 
-    def get_player(self, player_id):
-        """returns the player with the given player_id"""
-        return self.session.query(Player).filter_by(player_id=player_id).one_or_none()
+    def get_player(self, player_id=None, esb_id=None):
+        """returns the player with the given player_id (gsis) or esb_id"""
+        if player_id is not None:
+            return self.session.query(Player).filter_by(player_id=player_id).one_or_none()
+        elif esb_id is not None:
+            return self.session.query(Player).filter_by(esb_id=esb_id).one_or_none()
+        # durch log ersetzen
+        print(f"Player with gsis {player_id} or esb {esb_id} not available.")
+        return None
 
 
     def get_active_players(self):
@@ -151,22 +161,9 @@ class Players():
 
 
 if __name__ == "__main__":
-    dbase = Players(echo=False, path='test.db')
-    p = dbase.create_player({
-        'player_id': '00-01',
-        'name': 'Test Player',
-        'status': 'INJ'
-    })
-    up = dbase.create_player({
-        'player_id': '00-01',
-        'name': 'Test Player',
-        'status': 'ACT'
-    })
-    dbase.add_player(p)
-    print(dbase.get_first_player().asdict())
-    dbase.update_player(up.player_id, up)
-    print(dbase.get_first_player().asdict())
-    f = dbase.get_first_player()
+    dbase = Players()
+    p = dbase.get_player('00-0033366')
+    print(p.asdict())
     # active = dbase.get_active_players()
 # add multiple objects to the database
 # session.add_all([

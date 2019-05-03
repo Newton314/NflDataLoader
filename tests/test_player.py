@@ -2,10 +2,10 @@ import unittest
 from datetime import date
 from pathlib import Path
 
-from NflDataLoader.playerdataloader import convert_pounds_to_kg, convert_inch_to_cm
+from NflDataLoader.helperfunctions import convert_pounds_to_kg, convert_inch_to_cm
 from NflDataLoader.player_db import Players
 
-class TestPlayerLoader(unittest.TestCase):
+class TestHelperFunctions(unittest.TestCase):
     def test_convert_inch_to_cm_bindestreich(self):
         feet = 6
         inches = 2

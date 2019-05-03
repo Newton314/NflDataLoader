@@ -3,29 +3,29 @@ from datetime import date
 
 import pandas as pd
 import requests as req
-from bs4 import BeautifulSoup as BS
 
+from player_db import Players
+from roster import update_database
 
 class PlayerDataLoader():
-    pass
+    def __init__(self, **kwargs):
+        """
+        optional parameters:
+        'path': str, filepath for the players database
+        'echo': bool
+        """
+        self.db_path = kwargs.get('path', 'NflDataLoader/database/nflplayers.db')
+        self.db = Players(
+            path=self.db_path,
+            echo=kwargs.get('echo', False)
+            )
 
 
-def convert_inch_to_cm(value):
-    '''
-    converts feet-inches to cm
-    '''
-    try:
-        m = re.match(r"(?P<feet>\d)-(?P<inches>\d+)", value)
-        feet = int(m.group('feet'))
-        inches = int(m.group('inches'))
-    except AttributeError:
-        m = re.match(r"(?P<feet>\d)\'(?P<inches>\d+)\"", value)
-        feet = int(m.group('feet'))
-        inches = int(m.group('inches'))
-    return round(feet * 30.48 + inches * 2.54)
+    def update_database(self):
+        self.db = update_database(self.db_path)
 
-def convert_pounds_to_kg(value):
-    '''
-    converts pounds to rounded kg
-    '''
-    return round(float(value) * 0.4536)
+
+    def get_player_data(self, player_id) -> dict:
+        data = self.db.get_player(player_id).asdict()
+        return pd.DataFrame(data)
+

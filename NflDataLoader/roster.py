@@ -5,11 +5,12 @@ from typing import Tuple, List
 from pathlib import Path
 
 import requests
+from requests.exceptions import ConnectTimeout
 from bs4 import BeautifulSoup as BS
 from tqdm import tqdm
 
 from player_db import Players
-from playerdataloader import convert_inch_to_cm, convert_pounds_to_kg
+from helperfunctions import convert_inch_to_cm, convert_pounds_to_kg
 
 
 # profile_url = 'http://www.nfl.com/players/profile'
@@ -57,7 +58,10 @@ TEAMS = [
 def download_roster(team: str) -> Roster:
     roster_url = 'http://www.nfl.com/teams/roster'
     roster_load = {'team': team}
-    response = requests.get(roster_url, roster_load, timeout=2)
+    try:
+        response = requests.get(roster_url, roster_load, timeout=5)
+    except ConnectTimeout:
+        print(response.url)
     soup = BS(response.text, 'html.parser')
     tbodys = soup.find(id='result').find_all('tbody')
     roster = []
@@ -85,23 +89,30 @@ def download_roster(team: str) -> Roster:
                 'esb_id': esb_id
             }
             roster.append(d)
-        except Exception:
-            print('Error')
+        except Exception as e:
+            print(e)
     return roster
 
 
 def get_player_ids(url: str) -> Player_IDs:
-    response = requests.get(url, timeout=2)
+    try:
+        response = requests.get(url, timeout=10)
+    except ConnectTimeout:
+        print(f"Timout while connecting to {url}")
+        return ("gsis0000", "esb0000")
     if response.status_code == 200:
         text = response.text
         index = text.find('GSIS')
         gsis_id = text[index+9:index+19]
         if not gsis_id[-4:].isdigit():
-            gsis_id = None
+            gsis_id = "0000"
         index = text.find('ESB ID')
         esb_id = text[index+8:index+17]
-        return (gsis_id, esb_id)
-    return None
+    else:
+        gsis_id = "gsis0000"
+        esb_id = "esb0000"
+    return (gsis_id, esb_id)
+    
 
 
 def convert_roster(roster: Roster):
@@ -139,9 +150,9 @@ def create_db_entries(db: Players, roster: Roster) -> list:
     return players
 
 
-def create_new_database(PATH: Path = Path('NflDataLoader/database/nflplayers.db')):
-    db = Players(path=str(PATH))
-    for team in tqdm(TEAMS, desc="Teams"):
+def create_new_database(PATH: Path = Path('NflDataLoader/database/nflplayers.db'), **kwargs):
+    db = Players(path=str(PATH), echo=kwargs.get('echo', False))
+    for team in tqdm(TEAMS, desc="Downloading Roster..."):
         team_roster = download_roster(team)
         roster = create_db_entries(db, team_roster)
         for player in roster:
@@ -163,5 +174,11 @@ def update_database(PATH: Path = Path('NflDataLoader/database/nflplayers.db')):
 
 
 if __name__ == '__main__':
-    dbase = update_database()
-    dbase.get_active_players()
+    # dbase = create_new_database(echo=True)
+    # print(dbase.get_first_player().asdict())
+    # url = "http://www.nfl.com/player/jordanbrown/2562396/profile"
+    # i, d = get_player_ids(url)
+    # print(i,d)
+    r = download_roster('ATL')
+    for p in r:
+        print(p)
