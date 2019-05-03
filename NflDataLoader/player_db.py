@@ -94,12 +94,12 @@ class Players():
         return new_player
 
 
-    def add_player(self, newplayer):
+    def add_player(self, newplayer: Player):
         """
-        sollte in Zukunft auch esb-id unterstützen
+        adds player to database if not already in it
+        uses esb_id to distinguish between players
         """
-        query = self.session.query(Player)\
-            .filter(or_(Player.name == newplayer.name, Player.player_id == newplayer.player_id))
+        query = self.session.query(Player).filter_by(esb_id=newplayer.esb_id)
         try:
             match = query.one_or_none()
             if match is None:
@@ -108,7 +108,7 @@ class Players():
             else:
                 print(f"Player {newplayer.name} is already in the database.")
         except MultipleResultsFound:
-            print("Multiple players exist in database")
+            print(f"Multiple players with same esb_id {newplayer.esb_id} exist in database")
 
 
     def get_first_player(self):
@@ -162,8 +162,9 @@ class Players():
 
 if __name__ == "__main__":
     dbase = Players()
-    p = dbase.get_player('00-0033366')
-    print(p.asdict())
+    p = dbase.get_active_players()
+    df = pd.DataFrame(p)
+    df.to_csv("active_players.csv")
     # active = dbase.get_active_players()
 # add multiple objects to the database
 # session.add_all([

@@ -174,11 +174,12 @@ def update_database(PATH: Path = Path('NflDataLoader/database/nflplayers.db')):
 
 
 if __name__ == '__main__':
-    # dbase = create_new_database(echo=True)
+    dbase = create_new_database()
+
     # print(dbase.get_first_player().asdict())
     # url = "http://www.nfl.com/player/jordanbrown/2562396/profile"
     # i, d = get_player_ids(url)
     # print(i,d)
-    r = download_roster('ATL')
-    for p in r:
-        print(p)
+    # r = download_roster('ATL')
+    # for p in r:
+    #     print(p)
