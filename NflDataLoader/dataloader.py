@@ -115,7 +115,7 @@ class NflLoader():
     def add_standardfpts(self, table):
         """adds standard fantasypoints to the given table"""
         # punkte für safety und recovertouchdown fehlen noch!!
-        # restrukturierung für bessere Performance und übersichtlichkeit?!
+        # restrukturierung für bessere Performance und übersichtlichkeit!!!
         fpts = []
         defense = ['NT', 'DB', 'DT', 'LB', 'DE', 'CB', 'SAF']
         n_defplayer = len(table[table['position'].isin(defense)])
