@@ -54,6 +54,57 @@ TEAMS = [
     'WAS',
 ]
 
+def get_meta_data(playerinfo):
+    full_name = playerinfo.find(class_='player-name').get_text().strip()
+    try:
+        number = playerinfo.find(class_='player-number').get_text()
+        match = re.search(r'#(?P<number>\d+)\s(?P<position>[A-Z]+)', number)
+        number = match.group('number')
+        position = match.group('position')
+    except AttributeError:
+        number = 0
+        position = None
+    p = playerinfo.find_all('p')
+    info1 = list(p[2].stripped_strings)
+    college = list(p[4].stripped_strings)
+    n = re.search(';', college[1])
+    if n:
+        college[1] = college[1][:n.start()]
+    info = info1 + college
+    for x in range(1, len(info), 2):
+        info[x] = info[x][2:]
+    info = {info[x].lower(): info[x+1] for x in range(0, len(info), 2)}
+    info['exp'] = get_exp(list(p[5].stripped_strings))
+    info['height'] = convert_inch_to_cm(info['height'])
+    info['age'] = int(info['age'])
+    info['weight'] = convert_pounds_to_kg(info['weight'])
+    info['position'] = position
+    info['trikotnumber'] = int(number)
+    info['name'] = full_name
+    return info
+
+
+def get_exp(line: str) -> int:
+    m = re.search(r'(\d+)', line[1])
+    return int(m.group(1))
+
+
+def download_player_data(gsis_id: str) -> dict:
+    """Downloads the data for the player with the given gsis_id"""
+    URL = 'http://www.nfl.com/players/profile'
+    content = {'id': gsis_id}
+    response = requests.get(URL, content, timeout=5)
+    soup = BS(response.text, 'html.parser')
+    try:
+        playerinfo = soup.find(id='player-bio').find(class_='player-info')
+        meta = get_meta_data(playerinfo)
+        meta['player_id'] = gsis_id
+        index = response.text.find('ESB ID')
+        meta['esb_id'] = response.text[index+8:index+17]
+    except KeyError:
+        meta = None
+    return meta
+
 
 def download_roster(team: str) -> Roster:
     roster_url = 'http://www.nfl.com/teams/roster'
@@ -76,14 +127,14 @@ def download_roster(team: str) -> Roster:
             gsis_id, esb_id = get_player_ids(player_url)
             d = {
                 'player_id': gsis_id,
-                'number': data[0],
+                'trikotnumber': data[0],
                 'name': name,
                 'position': data[2],
                 'status': data[3],
                 'height': data[4],
                 'weight': data[5],
                 'birthdate': data[6],
-                'experience': data[7],
+                'exp': data[7],
                 'college': data[8],
                 'team': team,
                 'esb_id': esb_id
@@ -134,11 +185,11 @@ def convert_roster(roster: Roster):
         age = age.days
         age = int(age / 365)
         player['age'] = age
-        player['experience'] = int(player['experience'])
+        player['exp'] = int(player['exp'])
         try:
-            player['number'] = int(player['number'])
+            player['trikotnumber'] = int(player['trikotnumber'])
         except ValueError:
-            player['number'] = 0
+            player['trikotnumber'] = 0
     return roster
 
 
@@ -167,14 +218,14 @@ def update_database(PATH: Path = Path('NflDataLoader/database/nflplayers.db')):
             team_roster = download_roster(team)
             team_roster = create_db_entries(db, team_roster)
             for player in team_roster:
-                db.update_player(player.player_id, player)
+                db.update_player(player, esb_id=player.esb_id)
     else:
         db = create_new_database(PATH=PATH)
     return db
 
 
 if __name__ == '__main__':
-    dbase = create_new_database()
+    # dbase = update_database()
 
     # print(dbase.get_first_player().asdict())
     # url = "http://www.nfl.com/player/jordanbrown/2562396/profile"
@@ -183,3 +234,5 @@ if __name__ == '__main__':
     # r = download_roster('ATL')
     # for p in r:
     #     print(p)
+    i = "00-0029248" # Luke Kuechly
+    print(download_player_data(i))

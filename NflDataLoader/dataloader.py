@@ -9,7 +9,8 @@ from tqdm import tqdm
 
 from .scheduleloader import (
     ScheduleLoader, load_json, save_obj_to_json, create_date_from_eid, add_dateinfo)
-from .playerinfo import get_playerdata
+# from .playerinfo import get_playerdata
+from playerdataloader import get_player_infos
 
 EID = NewType('EID', str)
 
@@ -107,7 +108,7 @@ class NflLoader():
     def __add_player_info(self, table: pd.DataFrame) -> pd.DataFrame:
         """adds infos about players to the given table"""
         player_ids = list(table['playerID'])
-        playerinfos = get_playerdata(player_ids)
+        playerinfos = get_player_infos(player_ids)
         return pd.merge(table, playerinfos, on=['playerID', 'name'])
 
 

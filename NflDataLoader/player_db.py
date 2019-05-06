@@ -124,6 +124,17 @@ class Players():
         # durch log ersetzen
         print(f"Player with gsis {player_id} or esb {esb_id} not available.")
         return None
+    
+    def get_multiple_players(self, gsis_ids=None, esb_ids=None):
+        """genrator which returns all infos for players in gsis_ids or esb_ids"""
+        if gsis_ids is not None:
+            for player in self.session.query(Player).filter(Player.player_id.in_(gsis_ids)):
+                yield player.asdict()
+        elif esb_ids is not None:
+            for player in self.session.query(Player).filter(Player.esb_id.in_(esb_ids)):
+                yield player.asdict()
+        else:
+            raise("You need to provide a list with ids.")
 
 
     def get_active_players(self):
@@ -131,12 +142,17 @@ class Players():
         return [player.asdict() for player in self.session.query(Player).filter_by(status='ACT')]
 
 
-    def update_player(self, player_id: str, updated_player: Player):
+    def update_player(self, updated_player: Player, esb_id: str = None, gsis_id: str = None):
         """updates name, trikotnumber, status, height, weight, team,
         college, birthdate, age, exp of the player with the given player_id
         if there is no player with the given player_id adds it to the database
         """
-        player = self.session.query(Player).filter_by(player_id=player_id).one_or_none()
+        if esb_id is not None:
+            player = self.get_player(esb_id=esb_id)
+        elif gsis_id is not None:
+            player = self.get_player(player_id=gsis_id)
+        else:
+            raise ValueError ("You need to provide an player id")
         if player is None:
             self.add_player(updated_player)
         else:
@@ -154,7 +170,7 @@ class Players():
 
 
     def update_player_status(self, player_id: str, status: str):
-        """updates the status of the player with the given player_id"""
+        """updates the status of the player with the given gsis_id"""
         player = self.session.query(Player).filter_by(player_id=player_id).one_or_none()
         if player is not None:
             player.status = status
