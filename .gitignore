@@ -14,3 +14,5 @@ NflDataLoader/database/schedule/shelves/2017
 NflDataLoader/database/schedule/shelves/2018
 player.txt
 man.py
+NflDataLoader/old/pinfo.py
+NflDataLoader/old/dbase.py
