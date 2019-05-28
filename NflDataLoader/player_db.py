@@ -1,12 +1,12 @@
 # from datetime import date
+from typing import Sequence
 import sqlalchemy as db
-from sqlalchemy import Column, Integer, String, Date, or_
+from sqlalchemy import Column, Integer, String, Date
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.exc import MultipleResultsFound
 
 import pandas as pd
-
 
 Base = declarative_base()
 class Player(Base):
@@ -119,14 +119,15 @@ class Players():
         """returns the player with the given player_id (gsis) or esb_id"""
         if player_id is not None:
             return self.session.query(Player).filter_by(player_id=player_id).one_or_none()
-        elif esb_id is not None:
+        if esb_id is not None:
             return self.session.query(Player).filter_by(esb_id=esb_id).one_or_none()
         # durch log ersetzen
         print(f"Player with gsis {player_id} or esb {esb_id} not available.")
         return None
-    
-    def get_multiple_players(self, gsis_ids=None, esb_ids=None):
-        """genrator which returns all infos for players in gsis_ids or esb_ids"""
+
+
+    def get_multiple_players(self, gsis_ids: Sequence = None, esb_ids: Sequence = None):
+        """generator which returns all infos for players in gsis_ids or esb_ids"""
         if gsis_ids is not None:
             for player in self.session.query(Player).filter(Player.player_id.in_(gsis_ids)):
                 yield player.asdict()
@@ -134,7 +135,7 @@ class Players():
             for player in self.session.query(Player).filter(Player.esb_id.in_(esb_ids)):
                 yield player.asdict()
         else:
-            raise("You need to provide a list with ids.")
+            raise "You need to provide a list with ids."
 
 
     def get_active_players(self):
@@ -145,14 +146,14 @@ class Players():
     def update_player(self, updated_player: Player, esb_id: str = None, gsis_id: str = None):
         """updates name, trikotnumber, status, height, weight, team,
         college, birthdate, age, exp of the player with the given player_id
-        if there is no player with the given player_id adds it to the database
+        if there is no player with the given id adds it to the database
         """
         if esb_id is not None:
             player = self.get_player(esb_id=esb_id)
         elif gsis_id is not None:
             player = self.get_player(player_id=gsis_id)
         else:
-            raise ValueError ("You need to provide an player id")
+            raise ValueError("You need to provide an player id")
         if player is None:
             self.add_player(updated_player)
         else:

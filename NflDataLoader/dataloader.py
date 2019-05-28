@@ -9,8 +9,7 @@ from tqdm import tqdm
 
 from .scheduleloader import (
     ScheduleLoader, load_json, save_obj_to_json, create_date_from_eid, add_dateinfo)
-# from .playerinfo import get_playerdata
-from playerdataloader import get_player_infos
+from .playerdataloader import get_player_infos
 
 EID = NewType('EID', str)
 
@@ -90,7 +89,7 @@ class NflLoader():
 
 
     def __create_subtable(self, dic: dict, category: str) -> pd.DataFrame:
-        prefix = {'rushing': 'rush_', 'passing': 'pass_', 'receiving': 'rcv_',
+        prefix = {'rushing': 'rush_', 'passing': 'pass_', 'receiving': 'recv_',
                   'kickret': 'kret_', 'puntret': 'pret_', 'kicking': 'k_', 'punting': 'p_'}
         dframe = pd.DataFrame(dic[category]).T
         dframe['playerID'] = dframe.index
@@ -110,6 +109,25 @@ class NflLoader():
         player_ids = list(table['playerID'])
         playerinfos = get_player_infos(player_ids)
         return pd.merge(table, playerinfos, on=['playerID', 'name'])
+
+
+    def add_fpts(self, table):
+        """new function to calculate fantasy points
+        hopefuly faster than the old one
+        """
+        defense_positions = ('NT', 'DB', 'DT', 'LB', 'DE', 'CB', 'SAF')
+        nr_defense_player = len(table[table['position'].isin(defense_positions)])
+        table['fpts'] = 0
+        table.fpts += table['pass_yds'] / 25 + table['pass_tds'] * 4 - table['pass_ints'] * 2
+        table.fpts += table['rush_yds'] / 10 + table['rush_tds'] * 6
+        table.fpts += table['recv_yds'] / 10 + table['recv_tds'] * 6
+        table.fpts += (table['pass_twoptm'] + table['rush_twoptm'] + table['recv_twoptm']) * 2
+        table.fpts += (table['rcv'] + table['trcv'] - table['lost']) * 2
+        # vereinfachte Rechnung der punkte für fieldgoals
+        # normally 5 pts for fg > 50 yds
+        table.fpts += table['k_fgm'] * 3
+        #continue here
+        return table
 
 
     def add_standardfpts(self, table):
@@ -292,3 +310,12 @@ class NflLoader():
         if (file_path not in self.datapath.iterdir()) or self.new:
             return self.__create_seasontable(season, seasontype=seasontype, update_schedule=True)
         return pd.read_csv(file_path)
+
+
+def create_test_data(season: int, week: int) -> pd.DataFrame:
+    """create a DataFrame for predictions"""
+    schedule_loader = ScheduleLoader(season=season, week=week)
+    schedule = schedule_loader.schedule
+    # continue here
+    raise NotImplementedError
+    return
