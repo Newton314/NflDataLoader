@@ -10,7 +10,7 @@ import requests
 from requests.exceptions import Timeout
 import pandas as pd
 
-from .NFLHandler import NflHandler
+from NFLHandler import NflHandler
 
 
 EID = NewType('EID', str)

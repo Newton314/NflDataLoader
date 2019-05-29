@@ -1,15 +1,16 @@
 import threading
 from pathlib import Path
 from typing import NewType
+import pprint
 
 import requests
 import pandas as pd
 import numpy as np
 from tqdm import tqdm
 
-from .scheduleloader import (
+from scheduleloader import (
     ScheduleLoader, load_json, save_obj_to_json, create_date_from_eid, add_dateinfo)
-from .playerdataloader import get_player_infos
+from playerdataloader import get_player_infos
 
 EID = NewType('EID', str)
 
@@ -312,10 +313,14 @@ class NflLoader():
         return pd.read_csv(file_path)
 
 
-def create_test_data(season: int, week: int) -> pd.DataFrame:
+def create_test_data(season: int, weeks: list) -> pd.DataFrame:
     """create a DataFrame for predictions"""
-    schedule_loader = ScheduleLoader(season=season, week=week)
+    schedule_loader = ScheduleLoader(season=season, week=weeks[0], update=False)
     schedule = schedule_loader.schedule
+    df = pd.DataFrame(schedule)
+    print(df)
     # continue here
-    raise NotImplementedError
-    return
+    # raise NotImplementedError
+
+if __name__ == "__main__":
+    create_test_data(2019, [1])

@@ -1,10 +1,10 @@
 from xml.sax import handler
 from datetime import date
 
-import requests
 
 class NflHandler(handler.ContentHandler):
     def __init__(self, season, seasontype, week):
+        super().__init__()
         self.games = []
         self.week = week
         self.season = season
@@ -23,15 +23,12 @@ class NflHandler(handler.ContentHandler):
             gdic['seasonType'] = self.stype
             day = int(attrs['eid'][6:8])
             month = int(attrs['eid'][4:6])
-            if month < self.d.month or self.d.year > self.season:
+            gamedate = date(self.season, month, day)
+            if gamedate < self.d:
                 gdic['finished'] = True
             else:
-                if day < self.d.day:
-                    gdic['finished'] = True
-                else:
-                    gdic['finished'] = False
+                gdic['finished'] = False
             self.games.append(gdic)
 
     def get_games(self):
         return self.games
-

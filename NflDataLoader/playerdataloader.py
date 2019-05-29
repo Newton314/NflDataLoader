@@ -2,8 +2,8 @@
 from typing import Sequence
 import pandas as pd
 
-from .player_db import Players
-from .roster import update_database, download_player_data
+from player_db import Players
+from roster import update_database, download_player_data
 
 class PlayerDataLoader():
     def __init__(self, **kwargs):
