@@ -65,8 +65,15 @@ def get_meta_data(playerinfo):
         number = 0
         position = None
     p = playerinfo.find_all('p')
-    info1 = list(p[2].stripped_strings)
-    college = list(p[4].stripped_strings)
+    for entry in p:
+        if 'Height' in str(entry):
+            info1 = list(entry.stripped_strings)
+            continue
+        if 'College' in str(entry):
+            college = list(entry.stripped_strings)
+            break
+    # info1 = list(p[2].stripped_strings)
+    # college = list(p[4].stripped_strings)
     n = re.search(';', college[1])
     if n:
         college[1] = college[1][:n.start()]
@@ -74,7 +81,15 @@ def get_meta_data(playerinfo):
     for x in range(1, len(info), 2):
         info[x] = info[x][2:]
     info = {info[x].lower(): info[x+1] for x in range(0, len(info), 2)}
-    info['exp'] = get_exp(list(p[5].stripped_strings))
+    try:
+        info['exp'] = get_exp(list(p[5].stripped_strings))
+    except IndexError:
+        exp = ''
+        for entry in p:
+            if 'Experience' in str(entry):
+                exp = entry
+                break
+        info['exp'] = get_exp(list(exp.stripped_strings))
     info['height'] = convert_inch_to_cm(info['height'])
     info['age'] = int(info['age'])
     info['weight'] = convert_pounds_to_kg(info['weight'])
@@ -140,8 +155,8 @@ def download_roster(team: str) -> Roster:
                 'esb_id': esb_id
             }
             roster.append(d)
-        except Exception as e:
-            print(e)
+        except:
+            print("Error during roster download.")
     return roster
 
 
@@ -163,7 +178,6 @@ def get_player_ids(url: str) -> Player_IDs:
         gsis_id = "gsis0000"
         esb_id = "esb0000"
     return (gsis_id, esb_id)
-    
 
 
 def convert_roster(roster: Roster):

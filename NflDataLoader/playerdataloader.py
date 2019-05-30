@@ -26,25 +26,30 @@ class PlayerDataLoader():
 
     def get_player_data(self, gsis_id) -> dict:
         """return infos for the player with the given gsis id as dict"""
-        data = self.db.get_player(player_id=gsis_id).asdict()
-        if data is None:
-            data = download_player_data(gsis_id)
-            if data is not None:
-                player = self.db.create_player(data)
-                self.db.add_player(player)
-            else:
-                raise ValueError(f"For the player with id {gsis_id} no data available.")
+        data = self.db.get_player(player_id=gsis_id)
+        if data is not None:
+            return data.asdict()
+        data = download_player_data(gsis_id)
+        if data is not None:
+            player = self.db.create_player(data)
+            self.db.add_player(player)
+        else:
+            raise ValueError(f"For the player with id {gsis_id} no data available.")
         return data
 
 
     def get_multiple_player_data(self, gsis_ids: Sequence = None,
                                  esb_ids: Sequence = None) -> pd.DataFrame:
         if gsis_ids is not None:
-            return self.db.get_multiple_players(gsis_ids=gsis_ids)
+            for player in self.db.get_multiple_players(gsis_ids=gsis_ids):
+                yield player
         if esb_ids is not None:
             raise NotImplementedError
         return None
 
+
+    def get_active_players(self):
+        return self.db.get_active_players()
 
 def get_player_infos(gsis_ids: Sequence) -> pd.DataFrame:
     """return infos for players with the given gsis_ids as panda DataFrame"""

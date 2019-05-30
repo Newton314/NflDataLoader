@@ -122,7 +122,7 @@ class Players():
         if esb_id is not None:
             return self.session.query(Player).filter_by(esb_id=esb_id).one_or_none()
         # durch log ersetzen
-        print(f"Player with gsis {player_id} or esb {esb_id} not available.")
+        print(f"Gsis {player_id} or esb {esb_id} necessary.")
         return None
 
 

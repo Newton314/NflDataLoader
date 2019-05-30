@@ -10,7 +10,7 @@ from tqdm import tqdm
 
 from scheduleloader import (
     ScheduleLoader, load_json, save_obj_to_json, create_date_from_eid, add_dateinfo)
-from playerdataloader import get_player_infos
+from playerdataloader import get_player_infos, PlayerDataLoader
 
 EID = NewType('EID', str)
 
@@ -93,11 +93,11 @@ class NflLoader():
         prefix = {'rushing': 'rush_', 'passing': 'pass_', 'receiving': 'recv_',
                   'kickret': 'kret_', 'puntret': 'pret_', 'kicking': 'k_', 'punting': 'p_'}
         dframe = pd.DataFrame(dic[category]).T
-        dframe['playerID'] = dframe.index
+        dframe['player_id'] = dframe.index
         if category in prefix.keys():
             columns = list(dframe.columns)
             for column in columns:
-                if column == 'name' or column == 'playerID':
+                if column == 'name' or column == 'player_id':
                     continue
                 columns[columns.index(column)] = prefix[category] + str(column)
                 dframe[[column]] = dframe[[column]].astype(np.float64)
@@ -107,9 +107,10 @@ class NflLoader():
 
     def __add_player_info(self, table: pd.DataFrame) -> pd.DataFrame:
         """adds infos about players to the given table"""
-        player_ids = list(table['playerID'])
+        player_ids = list(table['player_id'])
         playerinfos = get_player_infos(player_ids)
-        return pd.merge(table, playerinfos, on=['playerID', 'name'])
+        del playerinfos['id']
+        return pd.merge(table, playerinfos, on='player_id', how='outer')
 
 
     def add_fpts(self, table):
@@ -199,11 +200,10 @@ class NflLoader():
             if not table.empty:
                 if statistics[category]:
                     table = pd.merge(table, self.__create_subtable(statistics, category),
-                                     how='outer', on=['playerID', 'name'], sort=False)
+                                     how='outer', on=['player_id', 'name'], sort=False)
             else:
                 if statistics[category]:
                     table = self.__create_subtable(statistics, category)
-        table['team'] = team
         table['opponent'] = opponent
         if place == 'home':
             table['home'] = 1
@@ -215,9 +215,12 @@ class NflLoader():
         table = add_dateinfo(table, create_date_from_eid(game_eid))
         table['tot_score'] = gamestats[game_eid][place]['score']['T']
         table['pts_allwd'] = gamestats[game_eid][opp_place]['score']['T']
-        table = table.sort_values(by='playerID')
-        table = table.reset_index(drop=True)
+        # table = table.sort_values(by='playerID')
+        # table = table.reset_index(drop=True)
+        del table['name']
         table = self.__add_player_info(table)
+        table['team'] = team
+        breakpoint()
         table = self.__adjust_exp(table, season)
         table = table.fillna(value=0)
         table = self.add_standardfpts(table)
@@ -248,7 +251,7 @@ class NflLoader():
 
     def __create_weektable(self, season, week,
                            seasontype='REG', update_schedule=True
-                           ):
+                           ) -> pd.DataFrame:
         # gametables = []
         threads = []
         weektable = pd.DataFrame()
@@ -316,11 +319,19 @@ class NflLoader():
 def create_test_data(season: int, weeks: list) -> pd.DataFrame:
     """create a DataFrame for predictions"""
     schedule_loader = ScheduleLoader(season=season, week=weeks[0], update=False)
+    player_loader = PlayerDataLoader()
     schedule = schedule_loader.schedule
-    df = pd.DataFrame(schedule)
-    print(df)
+    schedule_frame = pd.DataFrame(schedule)
+    active_players = pd.DataFrame(player_loader.get_active_players())
+    active_teams = list(schedule_frame['home']) + list(schedule_frame['away'])
+    test_data = active_players[active_players.team.isin(active_teams)].copy()
     # continue here
     # raise NotImplementedError
 
 if __name__ == "__main__":
-    create_test_data(2019, [1])
+    #create_test_data(2019, [1,])
+    loader = NflLoader()
+    loader.new = True
+    t = loader.get_game_table(2018, 1, 'CAR', update_schedule=True)
+    print(t.head())
+    t.to_csv("gametable.csv")
