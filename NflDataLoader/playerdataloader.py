@@ -51,6 +51,7 @@ class PlayerDataLoader():
     def get_active_players(self):
         return self.db.get_active_players()
 
+
 def get_player_infos(gsis_ids: Sequence) -> pd.DataFrame:
     """return infos for players with the given gsis_ids as panda DataFrame"""
     ploader = PlayerDataLoader()
@@ -67,8 +68,9 @@ def get_player_infos(gsis_ids: Sequence) -> pd.DataFrame:
 
 if __name__ == "__main__":
     ids = [
-        "00-0031181",
+        "00-0029248",
         "00-0030465",
     ]
-    info = get_player_infos(ids)
-    print(info.head())
+    # info = get_player_infos(ids)
+    info = download_player_data(ids[0])
+    print(info)

@@ -90,6 +90,7 @@ def get_meta_data(playerinfo):
                 exp = entry
                 break
         info['exp'] = get_exp(list(exp.stripped_strings))
+    print(full_name, info['exp'])
     info['height'] = convert_inch_to_cm(info['height'])
     info['age'] = int(info['age'])
     info['weight'] = convert_pounds_to_kg(info['weight'])
@@ -118,6 +119,11 @@ def download_player_data(gsis_id: str) -> dict:
         meta['esb_id'] = response.text[index+8:index+17]
     except KeyError:
         meta = None
+    except AttributeError:
+        # durch log ersetzen
+        print(f"Spieler mit {gsis_id} nicht gefunden")
+        meta = download_player_data(gsis_id)
+        breakpoint()
     return meta
 
 

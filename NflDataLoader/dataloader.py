@@ -83,8 +83,9 @@ class NflLoader():
 
     def __adjust_exp(self, dframe, season):
         currentseason = self.schedule_loader.get_season()
+        breakpoint()
         if currentseason > season:
-            dframe['experience'] = dframe['experience'].astype(int) - (currentseason - season)
+            dframe['exp'] = dframe['exp'].astype(int) - (currentseason - season)
             dframe['age'] = dframe['age'].astype(int) - (currentseason - season)
         return dframe
 
@@ -146,8 +147,8 @@ class NflLoader():
             pts = 0
             pts += tab['pass_yds'] / 25 + tab['pass_tds'] * 4 - tab['pass_ints'] * 2
             pts += tab['rush_yds'] / 10 + tab['rush_tds'] * 6
-            pts += tab['rcv_yds'] / 10 + tab['rcv_tds'] * 6
-            pts += (tab['pass_twoptm'] + tab['rush_twoptm'] + tab['rcv_twoptm']) * 2
+            pts += tab['recv_yds'] / 10 + tab['recv_tds'] * 6
+            pts += (tab['pass_twoptm'] + tab['rush_twoptm'] + tab['recv_twoptm']) * 2
             if 'rcv' in table.columns:
                 pts += (tab['rcv'] + tab['trcv'] - tab['lost']) * 2
             if 'k_fgyds' in table.columns:
@@ -220,7 +221,7 @@ class NflLoader():
         del table['name']
         table = self.__add_player_info(table)
         table['team'] = team
-        breakpoint()
+        # breakpoint()
         table = self.__adjust_exp(table, season)
         table = table.fillna(value=0)
         table = self.add_standardfpts(table)
@@ -332,6 +333,8 @@ if __name__ == "__main__":
     #create_test_data(2019, [1,])
     loader = NflLoader()
     loader.new = True
-    t = loader.get_game_table(2018, 1, 'CAR', update_schedule=True)
+    t = loader.get_game_table(2018, 1, 'CAR', update_schedule=False)
     print(t.head())
     t.to_csv("gametable.csv")
+    tab = pd.read_csv("gametable.csv")
+    tab.head()
