@@ -38,6 +38,7 @@ def get_test_data():
     season = 2019
     weeks = [1, 2]
     data = create_test_data(season, weeks)
+    data.to_csv("test_data.csv")
     print(data.head())
     print(data.columns)
 

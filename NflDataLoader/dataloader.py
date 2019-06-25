@@ -321,6 +321,18 @@ class NflLoader():
         return pd.read_csv(file_path, index_col=0, parse_dates=True)
 
 
+def add_columns(df):
+    df = df.copy()
+    df["home"] = 0
+    df["away"] = 0
+    df["opponent"] = None
+    df["date"] = None
+    df["year"] = 0
+    df["month"] = 0
+    df["day"] = 0
+    df["weekday"] = 0
+    return df
+
 def create_test_data(season: int, weeks: list) -> pd.DataFrame:
     """create a DataFrame for predictions"""
     week = weeks[0]
@@ -334,23 +346,29 @@ def create_test_data(season: int, weeks: list) -> pd.DataFrame:
     # get active teams
     active_teams = list(schedule_frame['home']) + list(schedule_frame['away'])
     test_data = active_players[active_players.team.isin(active_teams)].copy()
-    test_data["home"] = 0
-    test_data["away"] = 0
-    test_data["opponent"] = None
-    test_data["date"] = None
+    test_data = add_columns(test_data)
     for row in schedule_frame.iterrows():
         row = row[1]
         home_view = test_data[test_data['team'] == row["home"]].index
         test_data.loc[home_view, "home"] = 1
         test_data.loc[home_view, "away"] = 0
         test_data.loc[home_view, "opponent"] = row["away"]
-        test_data.loc[home_view, "date"] = create_date_from_eid(row["eid"])
-        
+        gamedate = create_date_from_eid(row["eid"])
+        test_data.loc[home_view, "date"] = gamedate
+        test_data.loc[home_view, "year"] = gamedate.year
+        test_data.loc[home_view, "month"] = gamedate.month
+        test_data.loc[home_view, "day"] = gamedate.day
+        test_data.loc[home_view, "weekday"] = gamedate.weekday()
+
         away_view = test_data[test_data['team'] == row["away"]].index
         test_data.loc[away_view, "home"] = 0
         test_data.loc[away_view, "away"] = 1
         test_data.loc[away_view, "opponent"] = row["home"]
-        test_data.loc[away_view, "date"] = create_date_from_eid(row["eid"])
+        test_data.loc[away_view, "date"] = gamedate
+        test_data.loc[away_view, "year"] = gamedate.year
+        test_data.loc[away_view, "month"] = gamedate.month
+        test_data.loc[away_view, "day"] = gamedate.day
+        test_data.loc[away_view, "weekday"] = gamedate.weekday()
     test_data['seasonweek'] = week
     del test_data['id']
     del test_data["status"]
