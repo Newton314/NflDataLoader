@@ -33,7 +33,7 @@ class TestPlayerDB(unittest.TestCase):
         self.players = Players(path='tests/fixtures/test.db', echo=False)
         self.test_player = {'name': 'Test Player', 'position': 'test_position',
                             'trikotnumber': 3, 'birthdate': today,
-                            'player_id': "00-01", 'status': 'ACT'}
+                            'player_id': "00-01", 'status': 'ACT', 'esb_id': 'test01'}
         player = self.players.create_player(self.test_player)
         self.players.add_player(player)
 
@@ -64,25 +64,27 @@ class TestPlayerDB(unittest.TestCase):
             'player_id': '00-01',
             'name': 'Updated Name',
             'status': 'Updated Status',
-            'team': 'Updated Team'
+            'team': 'Updated Team',
+            'esb_id': 'test01'
         })
         new_player = self.players.create_player({
             'player_id': '00-02',
             'name': 'New Name',
             'team': 'New Team',
-            'status': 'New Status'
+            'status': 'New Status',
+            'esb_id': 'test02'
         })
-        self.players.update_player(updated_player.player_id, updated_player)
-        player = self.players.get_player(updated_player.player_id)
+        self.players.update_player(updated_player, gsis_id=updated_player.player_id)
+        player = self.players.get_player(gsis_id=updated_player.player_id)
         self.assertEqual(player.name, updated_player.name)
         self.assertEqual(player.team, updated_player.team)
         self.assertEqual(player.status, updated_player.status)
-        self.players.update_player(new_player.player_id, new_player)
-        player = self.players.get_player(new_player.player_id)
-        self.assertEqual(player.player_id, new_player.player_id)
-        self.assertEqual(player.name, new_player.name)
-        self.assertEqual(player.team, new_player.team)
-        self.assertEqual(player.status, new_player.status)
+        self.players.update_player(new_player, gsis_id=new_player.player_id)
+        player2 = self.players.get_player(gsis_id=new_player.player_id)
+        self.assertEqual(player2.player_id, new_player.player_id)
+        self.assertEqual(player2.name, new_player.name)
+        self.assertEqual(player2.team, new_player.team)
+        self.assertEqual(player2.status, new_player.status)
 
 
     def tearDown(self):

@@ -9,8 +9,8 @@ from requests.exceptions import ConnectTimeout
 from bs4 import BeautifulSoup as BS
 from tqdm import tqdm
 
-from player_db import Players
-from helperfunctions import convert_inch_to_cm, convert_pounds_to_kg
+from .player_db import Players
+from .helperfunctions import convert_inch_to_cm, convert_pounds_to_kg
 
 
 # profile_url = 'http://www.nfl.com/players/profile'
@@ -63,7 +63,7 @@ def get_meta_data(playerinfo):
         position = match.group('position')
     except AttributeError:
         number = 0
-        position = None
+        position = 'RET'
     p = playerinfo.find_all('p')
     for entry in p:
         if 'Height' in str(entry):
@@ -90,7 +90,6 @@ def get_meta_data(playerinfo):
                 exp = entry
                 break
         info['exp'] = get_exp(list(exp.stripped_strings))
-    print(full_name, info['exp'])
     info['height'] = convert_inch_to_cm(info['height'])
     info['age'] = int(info['age'])
     info['weight'] = convert_pounds_to_kg(info['weight'])

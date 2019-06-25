@@ -1,16 +1,15 @@
 import threading
 from pathlib import Path
 from typing import NewType
-import pprint
 
 import requests
 import pandas as pd
 import numpy as np
 from tqdm import tqdm
 
-from scheduleloader import (
+from .scheduleloader import (
     ScheduleLoader, load_json, save_obj_to_json, create_date_from_eid, add_dateinfo)
-from playerdataloader import get_player_infos, PlayerDataLoader
+from .playerdataloader import get_player_infos, PlayerDataLoader
 
 EID = NewType('EID', str)
 
@@ -83,7 +82,7 @@ class NflLoader():
 
     def __adjust_exp(self, dframe, season):
         currentseason = self.schedule_loader.get_season()
-        breakpoint()
+        # breakpoint()
         if currentseason > season:
             dframe['exp'] = dframe['exp'].astype(int) - (currentseason - season)
             dframe['age'] = dframe['age'].astype(int) - (currentseason - season)
@@ -110,7 +109,11 @@ class NflLoader():
         """adds infos about players to the given table"""
         player_ids = list(table['player_id'])
         playerinfos = get_player_infos(player_ids)
-        del playerinfos['id']
+        try:
+            del playerinfos['id']
+            del playerinfos['status']
+        except KeyError:
+            pass
         return pd.merge(table, playerinfos, on='player_id', how='outer')
 
 
@@ -232,7 +235,8 @@ class NflLoader():
         return table
 
 
-    def get_game_table(self, season, week, team, update_schedule=True):
+    def get_game_table(self, season, week, team, update_schedule=True, **kwargs):
+        self.new = kwargs.get('new', self.new)
         directory_path = self.datapath / str(season) / str(team)
         directory_path.mkdir(parents=True, exist_ok=True)
         file_path = directory_path / f"{week}.csv"
@@ -290,7 +294,7 @@ class NflLoader():
             return self.__create_weektable(
                 season, week, seasontype=seasontype, update_schedule=update_schedule
                 )
-        return self.weektables.get(str(week), pd.read_csv(file_path))
+        return self.weektables.get(str(week), pd.read_csv(file_path, index_col=0, parse_dates=True))
 
 
     def __create_seasontable(self, season, seasontype='REG', update_schedule=True):
@@ -314,27 +318,46 @@ class NflLoader():
         file_path = self.datapath / f'{season}.csv'
         if (file_path not in self.datapath.iterdir()) or self.new:
             return self.__create_seasontable(season, seasontype=seasontype, update_schedule=True)
-        return pd.read_csv(file_path)
+        return pd.read_csv(file_path, index_col=0, parse_dates=True)
 
 
 def create_test_data(season: int, weeks: list) -> pd.DataFrame:
     """create a DataFrame for predictions"""
-    schedule_loader = ScheduleLoader(season=season, week=weeks[0], update=False)
+    week = weeks[0]
+    schedule_loader = ScheduleLoader(season=season, week=week, update=False)
     player_loader = PlayerDataLoader()
     schedule = schedule_loader.schedule
     schedule_frame = pd.DataFrame(schedule)
+    print(schedule_frame.head())
+    # get active players
     active_players = pd.DataFrame(player_loader.get_active_players())
+    # get active teams
     active_teams = list(schedule_frame['home']) + list(schedule_frame['away'])
     test_data = active_players[active_players.team.isin(active_teams)].copy()
+    test_data["home"] = 0
+    test_data["away"] = 0
+    test_data["opponent"] = None
+    test_data["date"] = None
+    for row in schedule_frame.iterrows():
+        row = row[1]
+        home_view = test_data[test_data['team'] == row["home"]].index
+        test_data.loc[home_view, "home"] = 1
+        test_data.loc[home_view, "away"] = 0
+        test_data.loc[home_view, "opponent"] = row["away"]
+        test_data.loc[home_view, "date"] = create_date_from_eid(row["eid"])
+        
+        away_view = test_data[test_data['team'] == row["away"]].index
+        test_data.loc[away_view, "home"] = 0
+        test_data.loc[away_view, "away"] = 1
+        test_data.loc[away_view, "opponent"] = row["home"]
+        test_data.loc[away_view, "date"] = create_date_from_eid(row["eid"])
+    test_data['seasonweek'] = week
+    del test_data['id']
+    del test_data["status"]
+    # del test_data["esb_id"]
+    return test_data
     # continue here
     # raise NotImplementedError
 
 if __name__ == "__main__":
-    #create_test_data(2019, [1,])
-    loader = NflLoader()
-    loader.new = True
-    t = loader.get_game_table(2018, 1, 'CAR', update_schedule=False)
-    print(t.head())
-    t.to_csv("gametable.csv")
-    tab = pd.read_csv("gametable.csv")
-    tab.head()
+    create_test_data(2019, [1,])

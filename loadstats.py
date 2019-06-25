@@ -1,9 +1,12 @@
 # loadstats.py
+from pathlib import Path
 import pandas as pd
 
-from NflDataLoader.dataloader import NflLoader
-from NflDataLoader.scheduleloader import ScheduleLoader, create_date_from_eid
-
+from NflDataLoader.dataloader import NflLoader, create_test_data
+from NflDataLoader.scheduleloader import (
+        ScheduleLoader, create_date_from_eid, save_obj_to_json
+)
+from NflDataLoader.roster import update_database
 
 def main():
     season = 2019
@@ -19,6 +22,28 @@ def get_stats():
         _ = nl.get_seasontable(season)
 
 
+def dataloader():
+    loader = NflLoader()
+    t = loader.get_game_table(2018, 1, 'CAR', update_schedule=False, new=True)
+    # print(t.head())
+    cols = list(t.columns)
+    filepath = Path('tests/fixtures')
+    filename = 'table_columns.json'
+    save_obj_to_json(cols, filepath, filename)
+    t.to_csv("gametable.csv")
+    tab = pd.read_csv("gametable.csv", index_col=0)
+    print(tab.head())
+
+def get_test_data():
+    season = 2019
+    weeks = [1, 2]
+    data = create_test_data(season, weeks)
+    print(data.head())
+    print(data.columns)
+
+def set_database():
+    update_database()
+
 if __name__ == "__main__":
-    # main()
-    get_stats()
+    #update_database()
+    get_test_data()

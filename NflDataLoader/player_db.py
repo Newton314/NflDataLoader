@@ -99,7 +99,12 @@ class Players():
         adds player to database if not already in it
         uses esb_id to distinguish between players
         """
-        query = self.session.query(Player).filter_by(esb_id=newplayer.esb_id)
+        if newplayer.esb_id is not None:
+            query = self.session.query(Player).filter_by(esb_id=newplayer.esb_id)
+        elif newplayer.player_id is not None:
+            query = self.session.query(Player).filter_by(player_id=newplayer.player_id)
+        else:
+            print(f'Missing ID for Player {newplayer.name}')
         try:
             match = query.one_or_none()
             if match is None:
@@ -115,14 +120,14 @@ class Players():
         return self.session.query(Player).first()
 
 
-    def get_player(self, player_id=None, esb_id=None):
+    def get_player(self, gsis_id=None, esb_id=None):
         """returns the player with the given player_id (gsis) or esb_id"""
-        if player_id is not None:
-            return self.session.query(Player).filter_by(player_id=player_id).one_or_none()
+        if gsis_id is not None:
+            return self.session.query(Player).filter_by(player_id=gsis_id).one_or_none()
         if esb_id is not None:
             return self.session.query(Player).filter_by(esb_id=esb_id).one_or_none()
         # durch log ersetzen
-        print(f"Gsis {player_id} or esb {esb_id} necessary.")
+        print(f"Gsis {gsis_id} or esb {esb_id} necessary.")
         return None
 
 
@@ -143,7 +148,7 @@ class Players():
         return [player.asdict() for player in self.session.query(Player).filter_by(status='ACT')]
 
 
-    def update_player(self, updated_player: Player, esb_id: str = None, gsis_id: str = None):
+    def update_player(self, updated_player: Player, gsis_id: str = None, esb_id: str = None):
         """updates name, trikotnumber, status, height, weight, team,
         college, birthdate, age, exp of the player with the given player_id
         if there is no player with the given id adds it to the database
@@ -151,7 +156,7 @@ class Players():
         if esb_id is not None:
             player = self.get_player(esb_id=esb_id)
         elif gsis_id is not None:
-            player = self.get_player(player_id=gsis_id)
+            player = self.get_player(gsis_id=gsis_id)
         else:
             raise ValueError("You need to provide an player id")
         if player is None:
