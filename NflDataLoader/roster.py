@@ -74,9 +74,9 @@ def get_meta_data(playerinfo):
             break
     # info1 = list(p[2].stripped_strings)
     # college = list(p[4].stripped_strings)
-    n = re.search(';', college[1])
+    n = re.search(':', college[1])
     if n:
-        college[1] = college[1][:n.start()]
+        college[1] = college[1][n.start():]
     info = info1 + college
     for x in range(1, len(info), 2):
         info[x] = info[x][2:]
@@ -101,7 +101,10 @@ def get_meta_data(playerinfo):
 
 def get_exp(line: str) -> int:
     m = re.search(r'(\d+)', line[1])
-    return int(m.group(1))
+    try:
+        return int(m.group(1))
+    except AttributeError:
+        return 0
 
 
 def download_player_data(gsis_id: str) -> dict:
@@ -121,8 +124,8 @@ def download_player_data(gsis_id: str) -> dict:
     except AttributeError:
         # durch log ersetzen
         print(f"Spieler mit {gsis_id} nicht gefunden")
-        meta = download_player_data(gsis_id)
         breakpoint()
+        meta = download_player_data(gsis_id)
     return meta
 
 

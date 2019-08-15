@@ -26,7 +26,7 @@ class PlayerDataLoader():
 
     def get_player_data(self, gsis_id) -> dict:
         """return infos for the player with the given gsis id as dict"""
-        data = self.db.get_player(player_id=gsis_id)
+        data = self.db.get_player(gsis_id=gsis_id)
         if data is not None:
             return data.asdict()
         data = download_player_data(gsis_id)
@@ -45,25 +45,23 @@ class PlayerDataLoader():
                 yield player
         if esb_ids is not None:
             raise NotImplementedError
-        return None
 
 
     def get_active_players(self):
         return self.db.get_active_players()
 
 
-def get_player_infos(gsis_ids: Sequence) -> pd.DataFrame:
-    """return infos for players with the given gsis_ids as panda DataFrame"""
-    ploader = PlayerDataLoader()
-    infos = []
-    for p in ploader.get_multiple_player_data(gsis_ids=gsis_ids):
-        infos.append(p)
-    if len(gsis_ids) == len(infos):
+    def get_player_infos(self, gsis_ids: Sequence) -> pd.DataFrame:
+        """return infos for players with the given gsis_ids as panda DataFrame"""
+        infos = []
+        for p in self.get_multiple_player_data(gsis_ids=gsis_ids):
+            infos.append(p)
+        if len(gsis_ids) == len(infos):
+            return pd.DataFrame(infos)
+        gsis_ids = set(gsis_ids) - {i['player_id'] for i in infos}
+        for gsis_id in gsis_ids:
+            infos.append(self.get_player_data(gsis_id=gsis_id))
         return pd.DataFrame(infos)
-    gsis_ids = set(gsis_ids) - {i['player_id'] for i in infos}
-    for i in gsis_ids:
-        infos.append(ploader.get_player_data(gsis_id=i))
-    return pd.DataFrame(infos)
 
 
 if __name__ == "__main__":

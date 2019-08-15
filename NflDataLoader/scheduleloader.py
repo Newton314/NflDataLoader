@@ -23,7 +23,7 @@ class ScheduleLoader():
         self.season = season
         self.seasontype = seasontype
         self.base_path = Path(kwargs.get('path', 'NflDataLoader/database/schedule'))
-        self.directory_path = self.base_path / str(season)
+        self.directory_path = self.base_path / str(season) / seasontype
         self.directory_path.mkdir(parents=True, exist_ok=True)
         if update:
             self.update_schedule()
@@ -63,17 +63,22 @@ class ScheduleLoader():
         '''
         updates the game schedule for the given season
         '''
-        for week in range(1, 18, 1):
+        if self.seasontype == 'REG':
+            weeks = [week for week in range(1, 18, 1)]
+        else:
+            weeks = [week for week in range(1, 5, 1)]
+        for week in weeks:
             schedule = self.__load_schedule(self.season, week, self.seasontype)
             save_obj_to_json(schedule, self.directory_path, f"{week}.json")
         return
 
 
-    def get_schedule(self, season, week, seasontype):
+    def get_schedule(self, season: int, week: int, seasontype: str) -> list:
         '''
         returns the games for a given combination of season, week, seasontype
         '''
-        self.directory_path = self.base_path / str(season)
+        self.directory_path = self.base_path / str(season) / seasontype
+        self.directory_path.mkdir(parents=True, exist_ok=True)
         filename = f"{week}.json"
         file_path = self.directory_path / filename
         if file_path in self.directory_path.iterdir():
@@ -81,6 +86,7 @@ class ScheduleLoader():
         else:
             schedule = self.__load_schedule(season, week, seasontype)
             save_obj_to_json(schedule, self.directory_path, filename)
+        self.schedule = schedule
         return schedule
 
 

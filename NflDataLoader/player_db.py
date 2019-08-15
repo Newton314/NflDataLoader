@@ -3,7 +3,7 @@ from typing import Sequence
 import sqlalchemy as db
 from sqlalchemy import Column, Integer, String, Date
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.orm.exc import MultipleResultsFound
 
 import pandas as pd
@@ -57,8 +57,9 @@ class Players():
         self._create_playerdb()
         # create a sessionmaker and connect the Engine object to it
         self.SessionMaker = sessionmaker(bind=self.engine)
+        self.SafeSession = scoped_session(self.SessionMaker)
         # create the session, which is the handler to the database
-        self.session = self.SessionMaker()
+        # self.session = self.SafeSession()
 
 
     def _create_playerdb(self):
@@ -99,53 +100,70 @@ class Players():
         adds player to database if not already in it
         uses esb_id to distinguish between players
         """
+        session = self.SafeSession()
         if newplayer.esb_id is not None:
-            query = self.session.query(Player).filter_by(esb_id=newplayer.esb_id)
+            query = session.query(Player).filter_by(esb_id=newplayer.esb_id)
         elif newplayer.player_id is not None:
-            query = self.session.query(Player).filter_by(player_id=newplayer.player_id)
+            query = session.query(Player).filter_by(player_id=newplayer.player_id)
         else:
             print(f'Missing ID for Player {newplayer.name}')
         try:
             match = query.one_or_none()
             if match is None:
-                self.session.add(newplayer)
-                self.session.commit()
+                session.add(newplayer)
+                session.commit()
             else:
                 print(f"Player {newplayer.name} is already in the database.")
         except MultipleResultsFound:
             print(f"Multiple players with same esb_id {newplayer.esb_id} exist in database")
+        finally:
+            self.SafeSession.remove()
 
 
     def get_first_player(self):
-        return self.session.query(Player).first()
+        session = self.SafeSession()
+        result = session.query(Player).first()
+        self.SafeSession.remove()
+        return result
 
 
     def get_player(self, gsis_id=None, esb_id=None):
         """returns the player with the given player_id (gsis) or esb_id"""
+        session = self.SafeSession()
         if gsis_id is not None:
-            return self.session.query(Player).filter_by(player_id=gsis_id).one_or_none()
-        if esb_id is not None:
-            return self.session.query(Player).filter_by(esb_id=esb_id).one_or_none()
-        # durch log ersetzen
-        print(f"Gsis {gsis_id} or esb {esb_id} necessary.")
-        return None
+            result = session.query(Player).filter_by(player_id=gsis_id).one_or_none()
+        elif esb_id is not None:
+            result = session.query(Player).filter_by(esb_id=esb_id).one_or_none()
+        else:
+            # durch log ersetzen
+            print(f"Gsis {gsis_id} or esb {esb_id} necessary.")
+            self.SafeSession.remove()
+            return None
+        self.SafeSession.remove()
+        return result
 
 
     def get_multiple_players(self, gsis_ids: Sequence = None, esb_ids: Sequence = None):
         """generator which returns all infos for players in gsis_ids or esb_ids"""
+        session = self.SafeSession()
         if gsis_ids is not None:
-            for player in self.session.query(Player).filter(Player.player_id.in_(gsis_ids)):
-                yield player.asdict()
+            result = session.query(Player).filter(Player.player_id.in_(gsis_ids))
         elif esb_ids is not None:
-            for player in self.session.query(Player).filter(Player.esb_id.in_(esb_ids)):
-                yield player.asdict()
+            result = session.query(Player).filter(Player.esb_id.in_(esb_ids))
         else:
+            self.SafeSession.remove()
             raise "You need to provide a list with ids."
+        self.SafeSession.remove()
+        for player in result:
+            yield player.asdict()
 
 
     def get_active_players(self):
         """ returns a list of playerdictionaries from players whose status == 'ACT'"""
-        return [player.asdict() for player in self.session.query(Player).filter_by(status='ACT')]
+        session = self.SafeSession()
+        players = [player.asdict() for player in session.query(Player).filter_by(status='ACT')]
+        self.SafeSession.remove()
+        return players
 
 
     def update_player(self, updated_player: Player, gsis_id: str = None, esb_id: str = None):
@@ -153,6 +171,7 @@ class Players():
         college, birthdate, age, exp of the player with the given player_id
         if there is no player with the given id adds it to the database
         """
+        session = self.SafeSession()
         if esb_id is not None:
             player = self.get_player(esb_id=esb_id)
         elif gsis_id is not None:
@@ -172,14 +191,18 @@ class Players():
             player.birthdate = updated_player.birthdate
             player.age = updated_player.age
             player.exp = updated_player.exp
-            self.session.commit()
+            session.commit()
+        self.SafeSession.remove()
 
 
     def update_player_status(self, player_id: str, status: str):
         """updates the status of the player with the given gsis_id"""
-        player = self.session.query(Player).filter_by(player_id=player_id).one_or_none()
+        session = self.SafeSession()
+        player = session.query(Player).filter_by(player_id=player_id).one_or_none()
         if player is not None:
             player.status = status
+        session.commit()
+        self.SafeSession.remove()
 
 
 if __name__ == "__main__":
