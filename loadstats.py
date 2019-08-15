@@ -25,7 +25,6 @@ def get_stats():
 def get_pre_season(season: int):
     loader = NflLoader(season, seasontype='PRE')
     stable = loader.get_seasontable()
-    print(stable.head())
 
 """
 def dataloader():
@@ -41,9 +40,9 @@ def dataloader():
     print(tab.head())
 """
 
-def load_player():
+def load_player(playerid):
     from NflDataLoader.roster import download_player_data
-    d = download_player_data("00-0031383")
+    d = download_player_data(playerid)
     print(d)
 
 def get_test_data():
@@ -60,5 +59,8 @@ def up_database():
     update_database()
 
 if __name__ == "__main__":
-#     get_pre_season(2018)
-    get_test_data()
+    for season in (2018, 2017, 2016, 2015):
+        get_pre_season(season)
+        print(f"PreSeason {season} finished!")
+    # get_test_data()
+    # load_player("00-0031704")

@@ -120,8 +120,8 @@ class NflLoader():
     def __add_player_info(self, table: pd.DataFrame) -> pd.DataFrame:
         """adds infos about players to the given table"""
         player_ids = list(table['player_id'])
-        with threading.Lock():
-            playerinfos = self.player_loader.get_player_infos(player_ids)
+        # with threading.Lock():
+        playerinfos = self.player_loader.get_player_infos(player_ids)
         try:
             del playerinfos['id']
             del playerinfos['status']
@@ -266,8 +266,8 @@ class NflLoader():
 
 
     def __create_weektable(self, week: int) -> pd.DataFrame:
-        # gametables = []
-        threads = []
+        self.tables = []
+        # threads = []
         weektable = pd.DataFrame()
         if self.schedule_loader.season != self.season:
             self.schedule_loader = ScheduleLoader(
@@ -280,12 +280,13 @@ class NflLoader():
         for i in self.schedule.index:
             for place in ('home', 'away'):
                 team = self.schedule.at[i, place]
-                args = (week, team)
-                thread = threading.Thread(target=self.__threading_job, args=args)
-                threads.append(thread)
-                thread.start()
-        for thread in threads:
-            thread.join()
+                self.tables.append(self.get_game_table(week, team))
+                # args = (week, team)
+                # thread = threading.Thread(target=self.__threading_job, args=args)
+                # threads.append(thread)
+                # thread.start()
+        # for thread in threads:
+            # thread.join()
         weektable = pd.concat(self.tables, ignore_index=True, sort=False)
         if self.save:
             file_path = self.datapath / f'{week}.csv'

@@ -1,6 +1,7 @@
 # roster.py
 import re
-from datetime import date
+from datetime import date, datetime
+from dateutil.parser import parse
 from typing import Tuple, List
 from pathlib import Path
 
@@ -65,39 +66,44 @@ def get_meta_data(playerinfo):
         number = 0
         position = 'RET'
     p = playerinfo.find_all('p')
+    info = {}
+    # breakpoint()
     for entry in p:
-        if 'Height' in str(entry):
-            info1 = list(entry.stripped_strings)
-            continue
-        if 'College' in str(entry):
-            college = list(entry.stripped_strings)
-            break
-    # info1 = list(p[2].stripped_strings)
-    # college = list(p[4].stripped_strings)
-    n = re.search(':', college[1])
-    if n:
-        college[1] = college[1][n.start():]
-    info = info1 + college
-    for x in range(1, len(info), 2):
-        info[x] = info[x][2:]
-    info = {info[x].lower(): info[x+1] for x in range(0, len(info), 2)}
-    try:
-        info['exp'] = get_exp(list(p[5].stripped_strings))
-    except IndexError:
-        exp = ''
-        for entry in p:
-            if 'Experience' in str(entry):
-                exp = entry
-                break
-        info['exp'] = get_exp(list(exp.stripped_strings))
-    info['height'] = convert_inch_to_cm(info['height'])
-    info['age'] = int(info['age'])
-    info['weight'] = convert_pounds_to_kg(info['weight'])
+        content = list(entry.stripped_strings)
+        if 'Height' in content:
+            height = content[content.index('Height') + 1]
+            height = convert_inch_to_cm(height[2:])
+            info['height'] = height
+        if "Weight" in content:
+            weight = content[content.index("Weight") + 1]
+            m = re.search(r"\d+", weight)
+            if m is not None:
+                weight = weight[m.start():m.end()]
+                weight = convert_pounds_to_kg(weight)
+                info["weight"] = weight
+        if "Age" in content:
+            age = content[content.index("Age") + 1]
+            info["age"] = int(age[2:])
+        elif 'Born' in content:
+            birthday = content[content.index("Born") + 1]
+            birthday = find_date(birthday)
+            info["birthdate"] = birthday
+        elif 'College' in content:
+            info['college'] = content[1][2:]
+        elif "Experience" in content:
+            exp = get_exp(content)
+            info['exp'] = exp
+    # breakpoint()
+    _ = info.setdefault("age", get_age_from_bday(info["birthdate"]))
     info['position'] = position
     info['trikotnumber'] = int(number)
     info['name'] = full_name
     return info
 
+def find_date(dt):
+    m = re.search(r"(\d+)/(\d+)/(\d+)", dt)
+    d = parse(dt[m.start():m.end()])
+    return d.date()
 
 def get_exp(line: str) -> int:
     m = re.search(r'(\d+)', line[1])
@@ -105,6 +111,13 @@ def get_exp(line: str) -> int:
         return int(m.group(1))
     except AttributeError:
         return 0
+
+
+def get_age_from_bday(bday: date) -> int:
+    today = date.today()
+    td = today - bday
+    age = td.days // 365
+    return age
 
 
 def download_player_data(gsis_id: str) -> dict:
