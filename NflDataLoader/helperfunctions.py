@@ -1,6 +1,7 @@
 # helperfunctions.py
 import re
 
+
 def convert_inch_to_cm(value):
     '''
     converts feet-inches to cm
@@ -10,7 +11,7 @@ def convert_inch_to_cm(value):
         feet = int(m.group('feet'))
         inches = int(m.group('inches'))
     except AttributeError:
-        m = re.match(r"(?P<feet>\d)\'(?P<inches>\d+)\"", value)
+        m = re.match(r"(?P<feet>\d)\'(?P<inches>\d+)", value)
         feet = int(m.group('feet'))
         inches = int(m.group('inches'))
     return round(feet * 30.48 + inches * 2.54)

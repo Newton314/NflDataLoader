@@ -10,6 +10,7 @@ from tqdm import tqdm
 from .scheduleloader import (
     ScheduleLoader, load_json, save_obj_to_json, create_date_from_eid, add_dateinfo)
 from .playerdataloader import PlayerDataLoader
+from .active_players import get_active_players_for_all_teams
 
 EID = NewType('EID', str)
 
@@ -37,7 +38,7 @@ class NflLoader():
         self.weektables = {}
         self.datapath = Path("NflDataLoader/database")
         self.datapath = self.datapath / str(self.season) / self.seasontype
-        self.datapath.mkdir(exist_ok=True)
+        self.datapath.mkdir(exist_ok=True, parents=True)
         self.schedule = None
         self.seasontable = pd.DataFrame()
         self.player_loader = PlayerDataLoader()
@@ -69,12 +70,11 @@ class NflLoader():
         try:
             return load_json(filepath)
         except FileNotFoundError:
-            resp = requests.get(jsonurl, timeout=1)
+            resp = requests.get(jsonurl, timeout=5)
             if resp.status_code == 200:
                 save_obj_to_json(resp.json(), directory_path, filename)
                 return resp.json()
-            else:
-                print("No Connection to game center")
+            print("No Connection to game center")
 
 
     def __det_places(self, eid: EID, gamestats: dict, team: str) -> tuple:
@@ -120,7 +120,6 @@ class NflLoader():
     def __add_player_info(self, table: pd.DataFrame) -> pd.DataFrame:
         """adds infos about players to the given table"""
         player_ids = list(table['player_id'])
-        # with threading.Lock():
         playerinfos = self.player_loader.get_player_infos(player_ids)
         try:
             del playerinfos['id']
@@ -128,7 +127,6 @@ class NflLoader():
         except KeyError:
             pass
         return pd.merge(table, playerinfos, on='player_id', how='outer')
-
 
     def add_fpts(self, table):
         """new function to calculate fantasy points
@@ -281,13 +279,8 @@ class NflLoader():
             for place in ('home', 'away'):
                 team = self.schedule.at[i, place]
                 self.tables.append(self.get_game_table(week, team))
-                # args = (week, team)
-                # thread = threading.Thread(target=self.__threading_job, args=args)
-                # threads.append(thread)
-                # thread.start()
-        # for thread in threads:
-            # thread.join()
         weektable = pd.concat(self.tables, ignore_index=True, sort=False)
+        self.tables.clear()
         if self.save:
             file_path = self.datapath / f'{week}.csv'
             weektable.to_csv(file_path)
@@ -342,9 +335,10 @@ def add_columns(df):
 def create_test_data(season: int, weeks: list) -> pd.DataFrame:
     """create a DataFrame for predictions"""
     schedule_loader = ScheduleLoader(season, weeks[0], update=True)
-    player_loader = PlayerDataLoader()
     # get active players
-    active_players = pd.DataFrame(player_loader.get_active_players())
+    # player_loader = PlayerDataLoader()
+    # active_players = pd.DataFrame(player_loader.get_active_players())
+    active_players = get_active_players_for_all_teams()
     test_data = []
     for week in weeks:
         schedule = schedule_loader.get_schedule(season, week, 'REG')
@@ -375,8 +369,10 @@ def create_test_data(season: int, weeks: list) -> pd.DataFrame:
             week_data.loc[away_view, "day"] = gamedate.day
             week_data.loc[away_view, "weekday"] = gamedate.weekday()
         week_data['seasonweek'] = week
-        del week_data['id']
-        del week_data["status"]
+        if 'id' in week_data.columns:
+            del week_data['id']
+        if 'status' in week_data.columns:
+            del week_data["status"]
         test_data.append(week_data)
         print(f"Week {week} finished!")
     test_data = pd.concat(test_data, sort=False, ignore_index=True)

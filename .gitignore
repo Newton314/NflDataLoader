@@ -16,3 +16,9 @@ player.txt
 man.py
 NflDataLoader/old/pinfo.py
 NflDataLoader/old/dbase.py
+.idea/misc.xml
+.idea/modules.xml
+.idea/NflStats.iml
+.idea/vcs.xml
+.idea/workspace.xml
+NflDataLoader/try.py

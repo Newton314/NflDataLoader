@@ -1,9 +1,9 @@
 # roster.py
 import re
-from datetime import date, datetime
-from dateutil.parser import parse
+from datetime import date
 from typing import Tuple, List
 from pathlib import Path
+from dateutil.parser import parse
 
 import requests
 from requests.exceptions import ConnectTimeout
@@ -55,6 +55,22 @@ TEAMS = [
     'WAS',
 ]
 
+def get_dummy_meta_data(gsis_id):
+    meta = {}
+    meta['height'] = 0
+    meta['weight'] = 0
+    meta['age'] = 0
+    meta['birthdate'] = date(1950, 1, 1)
+    meta['college'] = 'None'
+    meta['exp'] = 0
+    meta['position'] = 'NA'
+    meta['trikotnumber'] = 0
+    meta['name'] = 'NA'
+    meta['player_id'] = gsis_id
+    meta['esb_id'] = 'NA'
+    return meta
+
+
 def get_meta_data(playerinfo):
     full_name = playerinfo.find(class_='player-name').get_text().strip()
     try:
@@ -84,26 +100,28 @@ def get_meta_data(playerinfo):
         if "Age" in content:
             age = content[content.index("Age") + 1]
             info["age"] = int(age[2:])
-        elif 'Born' in content:
+        if 'Born' in content:
             birthday = content[content.index("Born") + 1]
             birthday = find_date(birthday)
             info["birthdate"] = birthday
-        elif 'College' in content:
+        if 'College' in content:
             info['college'] = content[1][2:]
-        elif "Experience" in content:
+        if "Experience" in content:
             exp = get_exp(content)
             info['exp'] = exp
     # breakpoint()
-    _ = info.setdefault("age", get_age_from_bday(info["birthdate"]))
+    _ = info.setdefault("age", get_age_from_bday(info.get("birthdate", date.today())))
     info['position'] = position
     info['trikotnumber'] = int(number)
     info['name'] = full_name
     return info
 
+
 def find_date(dt):
     m = re.search(r"(\d+)/(\d+)/(\d+)", dt)
     d = parse(dt[m.start():m.end()])
     return d.date()
+
 
 def get_exp(line: str) -> int:
     m = re.search(r'(\d+)', line[1])
@@ -137,21 +155,13 @@ def download_player_data(gsis_id: str) -> dict:
     except AttributeError:
         # durch log ersetzen
         print(f"Spieler mit {gsis_id} nicht gefunden")
-        breakpoint()
-        meta = download_player_data(gsis_id)
+        meta = get_dummy_meta_data(gsis_id)
     return meta
 
 
-def download_roster(team: str) -> Roster:
-    roster_url = 'http://www.nfl.com/teams/roster'
-    roster_load = {'team': team}
-    try:
-        response = requests.get(roster_url, roster_load, timeout=5)
-    except ConnectTimeout:
-        print(response.url)
-    soup = BS(response.text, 'html.parser')
+def find_player_infos(html_text, team: str):
+    soup = BS(html_text, 'html.parser')
     tbodys = soup.find(id='result').find_all('tbody')
-    roster = []
     for row in tbodys[len(tbodys) - 1].find_all('tr'):
         try:
             tds, data = [], []
@@ -167,18 +177,54 @@ def download_roster(team: str) -> Roster:
                 'name': name,
                 'position': data[2],
                 'status': data[3],
-                'height': data[4],
-                'weight': data[5],
+                'height': data[4] if data[4] else "0'0\"",
+                'weight': data[5] if data[5] else "0",
                 'birthdate': data[6],
                 'exp': data[7],
                 'college': data[8],
                 'team': team,
                 'esb_id': esb_id
             }
-            roster.append(d)
-        except:
-            print("Error during roster download.")
+            yield d
+        except NameError as e:
+            print(e)
+
+
+def download_roster(team: str):
+    roster_url = 'http://www.nfl.com/teams/roster'
+    roster_load = {'team': team}
+    try:
+        response = requests.get(roster_url, roster_load, timeout=5)
+    except ConnectTimeout:
+        print(response.url)
+    roster = []
+    for player in find_player_infos(response.text, team):
+        roster.append(player)
     return roster
+
+def get_player_links(team: str):
+    url = "http://nfl.com/teams/roster"
+    load = {'team': team}
+    try:
+        response = requests.get(url, load, timeout=10)
+        player_links = extract_links(response.text)
+        return player_links
+    except ConnectTimeout:
+        raise ConnectTimeout(f"Connection to {response.url} timed out!")
+
+def extract_links(html_text):
+    soup = BS(html_text, 'lxml')
+    tables = soup.find(id='result').find_all('tbody')
+    refs = tables[-1].find_all('a')
+    prefix = "http://www.nfl.com"
+    urls = [prefix + ref.get('href') for ref in refs]
+    names = [convert_name(ref.text) for ref in refs]
+    player_urls = dict(zip(names, urls))
+    return player_urls
+
+def convert_name(old_name: str) -> str:
+    match = re.match(r"(?P<lastname>[\S\s]+), (?P<firstname>\S+)", old_name)
+    return match.group('firstname') + " " + match.group('lastname')
 
 
 def get_player_ids(url: str) -> Player_IDs:
@@ -201,7 +247,14 @@ def get_player_ids(url: str) -> Player_IDs:
     return (gsis_id, esb_id)
 
 
-def convert_roster(roster: Roster):
+def download_player_ids(team: str):
+    links = get_player_links(team)
+    # multithreading?!
+    ids = {name: get_player_ids(url) for name, url in links.items()}
+    return ids
+
+
+def convert_roster(roster: Roster) -> Roster:
     today = date.today()
     for player in roster:
         player['height'] = convert_inch_to_cm(player['height'])
@@ -216,9 +269,7 @@ def convert_roster(roster: Roster):
         except ValueError:
             bday = today
         player['birthdate'] = bday
-        age = today - bday
-        age = age.days
-        age = int(age / 365)
+        age = get_age_from_bday(bday)
         player['age'] = age
         player['exp'] = int(player['exp'])
         try:
